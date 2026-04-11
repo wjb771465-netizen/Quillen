@@ -1,0 +1,11 @@
+# conda env: conda env create -f environment.yml
+# activate: conda activate quillen
+name: quillen
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10,<3.13
+  - pandoc
+  - pip
+  - pip:
+    - pypandoc>=1.11

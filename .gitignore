@@ -1,0 +1,5 @@
+outbox/*.docx
+
+__pycache__/
+*.py[cod]
+wjb_ws/
