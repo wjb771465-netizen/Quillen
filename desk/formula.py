@@ -9,6 +9,7 @@ import re
 import sys
 from pathlib import Path
 
+# Git 练习：可改本行或删本行，用来试 git add / commit。
 # 块级公式 $$ ... $$
 _DISPLAY = re.compile(r"\$\$(.*?)\$\$", re.DOTALL)
 # 行内 $ ... $（不与 $$ 混淆）
