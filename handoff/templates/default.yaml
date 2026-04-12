@@ -1,0 +1,5 @@
+# 默认导出模板（逻辑名：default）
+# desk 脚本后续可读取并与前言区 export / template 合并。
+template_id: default
+export:
+  docx_template: default
