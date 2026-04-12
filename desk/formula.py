@@ -9,7 +9,6 @@ import re
 import sys
 from pathlib import Path
 
-# Git 练习：可改本行或删本行，用来试 git add / commit。
 # 块级公式 $$ ... $$
 _DISPLAY = re.compile(r"\$\$(.*?)\$\$", re.DOTALL)
 # 行内 $ ... $（不与 $$ 混淆）
@@ -47,6 +46,27 @@ def _gaps(text: str, occupied: list[tuple[int, int]]) -> list[tuple[int, int]]:
     if pos < len(text):
         gaps.append((pos, len(text)))
     return gaps
+
+
+def _body_after_yaml_front_matter(text: str) -> str:
+    """若存在标准 YAML 前言区（首行 --- … 闭合 ---），返回其后正文；否则返回全文。"""
+    s = text.lstrip("\ufeff")
+    lines = s.splitlines(keepends=True)
+    if not lines or lines[0].strip() != "---":
+        return text
+    i = 1
+    while i < len(lines):
+        if lines[i].strip() == "---":
+            return "".join(lines[i + 1 :])
+        i += 1
+    return text
+
+
+def _source_stem(path: Path) -> str:
+    n = path.name
+    if n.lower().endswith(".qpad.md"):
+        return n[: -len(".qpad.md")]
+    return path.stem
 
 
 def list_math_in_markdown(text: str) -> list[tuple[str, str]]:
@@ -102,12 +122,13 @@ def main(argv: list[str] | None = None) -> int:
     if not src.is_file():
         print(f"找不到文件: {src}", file=sys.stderr)
         return 1
-    if src.suffix.lower() != ".md":
-        print("期望输入扩展名为 .md", file=sys.stderr)
+    suf = src.name.lower()
+    if not (suf.endswith(".md") or suf.endswith(".qpad.md")):
+        print("期望输入扩展名为 .md 或 .qpad.md", file=sys.stderr)
         return 1
 
     text = src.read_text(encoding="utf-8")
-    math_items = list_math_in_markdown(text)
+    math_items = list_math_in_markdown(_body_after_yaml_front_matter(text))
     print(f"共识别 {len(math_items)} 处公式（$ 行内 / $$ 块级）：")
     for i, (kind, body) in enumerate(math_items, 1):
         label = "块级" if kind == "display" else "行内"
@@ -116,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
             preview = preview[:117] + "..."
         print(f"  [{i}] {label}: {preview}")
 
-    out_docx = args.outbox / f"{src.stem}.docx"
+    out_docx = args.outbox / f"{_source_stem(src)}.docx"
     md_to_docx(src, out_docx)
     print(f"已写入: {out_docx}")
     return 0

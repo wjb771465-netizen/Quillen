@@ -1,6 +1,6 @@
 # Quillen（奎琳）
 
-面向**文档 / 演示文稿**的辅助工具集：把重复排版、格式转换和「从想法到可交付稿」的流程**固化在仓库里**，用脚本和约定减少手工折腾；后续可逐步接入更强的工作流（例如 Agent），但始终**以需求为驱动**。
+**奎琳**是面向文档与演示的**文书型小助理**：帮你把材料收好、格式对齐、交付物就位——本仓库就是她用的「工作台」：把重复排版、格式转换和「从想法到可交付稿」的流程**固化在仓库里**，用脚本和约定减少手工折腾；后续可逐步接入更强的工作流（例如 Agent），但始终**以需求为驱动**。
 
 ## 动机
 
@@ -14,10 +14,10 @@
 | 路径 | 说明 |
 |------|------|
 | `environment.yml` | Conda 环境定义（环境名 `quillen`：Python、pandoc、`pypandoc`）。 |
-| `desk/` | 桌面/日常工具脚本；当前核心为 `formula.py`。 |
+| `handoff/` | **交接层**（案头待办）：`PAD.md`（案笺说明）、`templates/`（命名导出模板）、`examples/` 样例稿；稿怎么写、模板放哪，与 desk 的契约与输入示例均在此。 |
+| `desk/` | **办公桌**：日常工具脚本，真正「动手」转换的地方；当前核心为 `formula.py`。 |
 | `desk/tests/` | 与 `desk` 配套的单元测试。 |
-| `examples/` | 示例 Markdown，便于试跑与对照。 |
-| `outbox/` | 默认输出目录（生成的 `.docx` 建议不入库，见 `.gitignore`）。 |
+| `outbox/` | **成品筐**：默认输出目录（生成的 `.docx` 建议不入库，见 `.gitignore`）。 |
 
 **展望（非承诺）**：在 `desk/` 或后续子包中扩展更多「稿 → 版式」管线（如幻灯片、模板化章节、质量检查）；输入侧可继续以「AI 产出 `idea.md` / 结构化大纲」为起点，输出侧由脚本统一落地。
 
@@ -52,10 +52,8 @@ pandoc -v
 
 ```bash
 conda activate quillen
-python desk/formula.py examples/posture_reward.md
+python desk/formula.py handoff/examples/posture_reward.md
 ```
-
-`examples/` 下另有 `heading_reward.md` 等示例，可替换路径试跑。默认写入 **`outbox/<与输入同名的 stem>.docx`**（例如上例生成 `outbox/posture_reward.docx`）。
 
 **指定输出目录**：
 
