@@ -144,4 +144,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    # Claude Code 验证注释：2026-04-13
     raise SystemExit(main())
