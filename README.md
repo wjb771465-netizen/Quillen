@@ -1,65 +1,96 @@
 # Quillen（奎琳）
 
-**奎琳**是面向文档与演示的**文书型小助理**：帮你把材料收好、格式对齐、交付物就位——本仓库就是她用的「工作台」：把重复排版、格式转换和「从想法到可交付稿」的流程**固化在仓库里**，用脚本和约定减少手工折腾；后续可逐步接入更强的工作流（例如 Agent），但始终**以需求为驱动**。
+**奎琳**是面向文档与演示的**文书型小助理**：把重复排版、格式转换和「从想法到可交付稿」的流程固化在仓库里，用脚本和约定减少手工折腾。
 
-## 动机
-
-- **网页对话式 AI**写大纲、公式很方便，但产物往往不能直接进 **Word / PPT**（例如 LaTeX 公式、版式不一致）。
-- **奎琳**希望在仓库中沉淀**可重复执行**的步骤：先有可版本控制的中间稿（如 Markdown），再由本仓库工具生成面向办公软件的输出，并控制「空话报告」类低价值内容（通过模板、校验与流程迭代，而非单次提示词）。
-
-当前第一个落地能力是：**含 LaTeX 数学公式的 Markdown → Word（`.docx`）**，并能在终端**列出识别到的公式片段**，便于核对。
-
-## 目录结构（现状与展望）
+## 目录结构
 
 | 路径 | 说明 |
 |------|------|
-| `environment.yml` | Conda 环境定义（环境名 `quillen`：Python、pandoc、`pypandoc`）。 |
-| `handoff/` | **交接层**（案头待办）：`PAD.md`（案笺说明）、`templates/`（命名导出模板）、`examples/` 样例稿；稿怎么写、模板放哪，与 desk 的契约与输入示例均在此。 |
-| `desk/` | **办公桌**：日常工具脚本，真正「动手」转换的地方；当前核心为 `formula.py`。 |
-| `desk/tests/` | 与 `desk` 配套的单元测试。 |
-| `outbox/` | **成品筐**：默认输出目录（生成的 `.docx` 建议不入库，见 `.gitignore`）。 |
-
-**展望（非承诺）**：在 `desk/` 或后续子包中扩展更多「稿 → 版式」管线（如幻灯片、模板化章节、质量检查）；输入侧可继续以「AI 产出 `idea.md` / 结构化大纲」为起点，输出侧由脚本统一落地。
+| `environment.yml` | Conda 环境定义（`quillen`：Python、pandoc、pypandoc、pyyaml） |
+| `handoff/` | 交接层：`PAD.md`（案笺格式说明）、`templates/`（命名模板目录）、`examples/`（示例稿） |
+| `desk/` | 工具脚本：`compose.py`（入口）、`formula.py`（库）、`utils.py`（路径与后处理）；详见 `desk/DESK.md` |
+| `desk/tests/` | 单元测试 |
+| `inbox/` | 自动化投稿槽：`*.auto.qpad.md` 文件变动触发 CI 流水线 |
+| `outbox/` | 本地输出目录（`.gitignore` 已忽略） |
+| `.github/workflows/` | CI 工作流（`compose-auto`、`sync-inbox`） |
 
 ## 环境准备
-
-1. 安装 [Miniconda](https://docs.conda.io/) 或 Anaconda（已安装可跳过）。
-2. 在本仓库根目录创建并激活环境：
 
 ```bash
 conda env create -f environment.yml   # 首次
 conda activate quillen
 ```
 
-3. 确认 Pandoc 可用（由 conda 提供）：
+---
 
-```bash
-pandoc -v
-```
+## 模式一：本地转换
 
-## 现有功能：公式 Markdown → Word
-
-**脚本**：`desk/formula.py`
-
-**作用**：
-
-- 读取输入 **`.md`**（UTF-8）。
-- 按常见 Pandoc/Markdown 习惯识别数学片段：**`$$...$$`** 为块级公式，**`$...$`** 为行内公式（块级区域内的内容不参与行内匹配）。
-- 在终端打印识别到的公式条数与简短预览。
-- 调用 **Pandoc**（经 `pypandoc`）将全文转为 **`.docx`**，公式在 Word 中一般为可编辑的公式对象（取决于 Pandoc 版本与内容）。
-
-**基本用法**（在仓库根目录执行）：
+适合开发调试、临时转换。
 
 ```bash
 conda activate quillen
-python desk/formula.py handoff/examples/posture_reward.md
+python desk/compose.py handoff/examples/handoff-sample.qpad.md
+# 输出到 outbox/handoff-sample.docx
 ```
 
-**指定输出目录**：
+指定输出目录：
 
 ```bash
-python desk/formula.py path/to/笔记.md -o /tmp/quillen-out
+python desk/compose.py path/to/稿件.qpad.md -o /tmp/out
 ```
+
+### 前言区字段
+
+```yaml
+---
+quillen_pad:
+  version: 1
+  kind: report        # memo | report
+  title: "标题"
+  lang: zh-CN
+template: report      # 逻辑名 → handoff/templates/report/reference.docx
+layout:
+  list_left: 0        # 列表左缩进（twips，567≈1cm）
+  list_hanging: 0     # 符号悬挂量
+---
+```
+
+`template` 省略时走无样式的默认 pandoc 输出；`layout` 省略时不做后处理。
+
+### 添加模板
+
+将已有 `.docx` 复制到 `handoff/templates/<name>/reference.docx` 即可：
+
+```bash
+cp 源文件.docx handoff/templates/mytemplate/reference.docx
+```
+
+前言区写 `template: mytemplate`。
+
+---
+
+## 模式二：自动流水线（auto 分支）
+
+适合在 Windows 网页端用 Claude Code 写稿、自动生成 docx 到独立仓库。
+
+### 流程
+
+```
+编辑 inbox/*.auto.qpad.md
+  → push 到 auto 分支
+  → GitHub Actions 运行 compose.py
+  → docx 推送到 Quillen-out/wjb/
+```
+
+### 投稿槽
+
+`inbox/` 下以 `.auto.qpad.md` 结尾的文件为固定槽位，直接编辑内容即可触发。输出文件名取自文件名去掉 `.auto.qpad.md` 后缀。
+
+### 自动同步
+
+`sync-inbox` workflow 每周一 02:00 UTC 自动将 `main` 合并进 `auto` 分支，保持 desk 脚本最新。
+
+---
 
 ## 测试
 
@@ -67,12 +98,6 @@ python desk/formula.py path/to/笔记.md -o /tmp/quillen-out
 conda activate quillen
 python -m unittest discover -s desk/tests -v
 ```
-
-## 限制与说明
-
-- 公式定界目前仅支持 **`$` / `$$`**；`\(...\)`、`\[...\]` 等写法可能不会被当前识别逻辑列出（转换仍可能由 Pandoc 处理，以实测为准）。
-- 行内公式若含未转义的 `$`，可能被切分错误，需以预览列表核对。
-- `outbox/*.docx` 已默认被 `.gitignore` 忽略；若需分享成品，请单独导出或使用发布流程。
 
 ---
 

@@ -1,13 +1,12 @@
 """
-将含 LaTeX 数学的 Markdown 转为 Word（.docx），并列出识别到的公式片段。
-依赖：系统由 conda 提供 pandoc；Python 侧 pypandoc。
+Markdown 数学公式识别与 md→docx 转换库。
+依赖：系统由 conda 提供 pandoc；Python 侧 pypandoc、pyyaml。
 """
 from __future__ import annotations
 
-import argparse
 import re
-import sys
 from pathlib import Path
+from typing import Any
 
 # 块级公式 $$ ... $$
 _DISPLAY = re.compile(r"\$\$(.*?)\$\$", re.DOTALL)
@@ -64,6 +63,8 @@ def _body_after_yaml_front_matter(text: str) -> str:
 
 def _source_stem(path: Path) -> str:
     n = path.name
+    if n.lower().endswith(".auto.qpad.md"):
+        return n[: -len(".auto.qpad.md")]
     if n.lower().endswith(".qpad.md"):
         return n[: -len(".qpad.md")]
     return path.stem
@@ -89,59 +90,38 @@ def list_math_in_markdown(text: str) -> list[tuple[str, str]]:
     return [(k, body) for _, k, body in found]
 
 
-def md_to_docx(src_md: Path, out_docx: Path) -> None:
+def parse_front_matter(text: str) -> tuple[dict[str, Any], str]:
+    """
+    解析 YAML 前言区，返回 (meta, body)。
+    无前言时 meta 为空字典，body 为全文。
+    """
+    import yaml
+
+    s = text.lstrip("\ufeff")
+    lines = s.splitlines(keepends=True)
+    if not lines or lines[0].strip() != "---":
+        return {}, text
+    i = 1
+    while i < len(lines):
+        if lines[i].strip() == "---":
+            meta = yaml.safe_load("".join(lines[1:i])) or {}
+            return meta, "".join(lines[i + 1 :])
+        i += 1
+    return {}, text
+
+
+def md_to_docx(src_md: Path, out_docx: Path, reference_doc: Path | None = None) -> None:
     import pypandoc
 
     out_docx.parent.mkdir(parents=True, exist_ok=True)
     text = src_md.read_text(encoding="utf-8")
+    extra_args = ["--standalone"]
+    if reference_doc is not None:
+        extra_args.append(f"--reference-doc={reference_doc}")
     pypandoc.convert_text(
         text,
         "docx",
         format="md",
         outputfile=str(out_docx),
-        extra_args=["--standalone"],
+        extra_args=extra_args,
     )
-
-
-def main(argv: list[str] | None = None) -> int:
-    root = Path(__file__).resolve().parent.parent
-    default_outbox = root / "outbox"
-
-    p = argparse.ArgumentParser(description="Markdown（含 LaTeX 公式）→ DOCX，并列出公式。")
-    p.add_argument("input_md", type=Path, help="输入 .md 文件路径")
-    p.add_argument(
-        "-o",
-        "--outbox",
-        type=Path,
-        default=default_outbox,
-        help=f"输出目录（默认: {default_outbox}）",
-    )
-    args = p.parse_args(argv)
-
-    src = args.input_md
-    if not src.is_file():
-        print(f"找不到文件: {src}", file=sys.stderr)
-        return 1
-    suf = src.name.lower()
-    if not (suf.endswith(".md") or suf.endswith(".qpad.md")):
-        print("期望输入扩展名为 .md 或 .qpad.md", file=sys.stderr)
-        return 1
-
-    text = src.read_text(encoding="utf-8")
-    math_items = list_math_in_markdown(_body_after_yaml_front_matter(text))
-    print(f"共识别 {len(math_items)} 处公式（$ 行内 / $$ 块级）：")
-    for i, (kind, body) in enumerate(math_items, 1):
-        label = "块级" if kind == "display" else "行内"
-        preview = body.replace("\n", " ")
-        if len(preview) > 120:
-            preview = preview[:117] + "..."
-        print(f"  [{i}] {label}: {preview}")
-
-    out_docx = args.outbox / f"{_source_stem(src)}.docx"
-    md_to_docx(src, out_docx)
-    print(f"已写入: {out_docx}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

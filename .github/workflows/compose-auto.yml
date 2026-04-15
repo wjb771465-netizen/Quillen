@@ -1,0 +1,45 @@
+name: compose-auto
+
+on:
+  push:
+    branches: ["auto"]
+    paths: ["inbox/*.auto.qpad.md"]
+  workflow_dispatch:
+
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pandoc
+        uses: pandoc/actions/setup@main
+
+      - name: Install Python dependencies
+        run: pip install pypandoc pyyaml
+
+      - name: Run compose on all auto files
+        run: |
+          mkdir -p outbox
+          for f in inbox/*.auto.qpad.md; do
+            echo "Processing: $f"
+            python desk/compose.py "$f" -o outbox/
+          done
+          ls -lh outbox/
+
+      - name: Push to Quillen-out
+        env:
+          PAT: ${{ secrets.QUILLEN_OUT }}
+        run: |
+          REMOTE="https://x-access-token:${PAT}@github.com/${{ github.repository_owner }}/Quillen-out.git"
+          git clone "$REMOTE" quillen-out
+          mkdir -p quillen-out/wjb
+          find outbox -name "*.docx" -exec cp {} quillen-out/wjb/ \;
+          cd quillen-out
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add wjb/
+          git diff --cached --quiet && echo "nothing to commit" && exit 0
+          git commit -m "auto: $(date '+%Y-%m-%d %H:%M UTC')"
+          git push origin HEAD:main
