@@ -27,21 +27,12 @@ quillen_pad:
 - **`version`**：本仓库当前契约为 **1**；破坏性变更时递增。
 - **`kind`**：文档种类，供未来不同 desk 管线路由；未知值时脚本可忽略或告警（以具体脚本为准）。
 
-### `export`（可选）
-
-供 Pandoc / Word 等导出阶段使用（**尚未** 全部由 `formula.py` 消费，预留字段名保持稳定即可）。
-
-```yaml
-export:
-  docx_template: default   # 例如 reference.docx 的逻辑名；见 handoff/templates/
-```
-
 ### `template`（可选）
 
-指向 **`handoff/templates/`** 下某套命名模板的逻辑名（如 `default`），desk 将来可与前言区 `export` 合并。
+**`handoff/templates/`** 下某套命名模板的逻辑名。desk 按约定解析其中的文件（当前：`reference.docx`）。
 
 ```yaml
-template: default
+template: default   # → handoff/templates/default/reference.docx
 ```
 
 ### 与正文的关系
@@ -51,7 +42,11 @@ template: default
 
 ## 命名模板
 
-- **`handoff/templates/*.yaml`**：一套导出默认值（如 `docx_template` 逻辑名）；前言区 **`template:`** 引用其中 `template_id` 对应的文件。
+- **`handoff/templates/<name>/`**：一套模板目录；前言区 **`template:`** 引用逻辑名，desk 按约定文件名解析。
+
+| 文件名 | 用途 |
+|--------|------|
+| `reference.docx` | pandoc `--reference-doc`，控制 Word 输出样式 |
 
 ## 示例稿
 

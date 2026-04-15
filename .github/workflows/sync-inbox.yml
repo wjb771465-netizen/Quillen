@@ -1,0 +1,24 @@
+name: sync-inbox
+
+on:
+  schedule:
+    - cron: "0 2 * * 1"  # 每周一 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout auto branch
+        uses: actions/checkout@v4
+        with:
+          ref: auto
+          fetch-depth: 0
+
+      - name: Merge from main
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git fetch origin main
+          git merge origin/main --no-edit
+          git push origin auto
