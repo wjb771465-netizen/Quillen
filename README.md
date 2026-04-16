@@ -7,11 +7,12 @@
 | 路径 | 说明 |
 |------|------|
 | `environment.yml` | Conda 环境定义（`quillen`：Python、pandoc、pypandoc、pyyaml） |
-| `inbox/` | 创作简报槽：`*.idea.md` 文件（格式见 `inbox/IDEA.md`） |
+| `inbox/` | 创作简报槽：`*.idea.md` 文件（格式见 `inbox/IDEA.md`）；`example/` 存放示例简报 |
 | `handoff/` | 交接层：`PAD.md`（案笺格式说明）、`*.auto.qpad.md`（CI 触发槽）、`templates/`、`examples/` |
-| `desk/` | 工具脚本：`compose.py`（入口）、`formula.py`（库）、`utils.py`（路径与后处理）；详见 `desk/DESK.md` |
+| `desk/` | 办公桌，存放工具脚本:详见 `desk/DESK.md` |
 | `desk/tests/` | 单元测试 |
 | `outbox/` | 本地输出目录（`.gitignore` 已忽略） |
+| `.claude/commands/` | Claude Code 自定义命令；`idea2doc.md` 为完整 idea→docx 工作流 |
 | `.github/workflows/` | CI 工作流（`compose-auto`、`sync-inbox`） |
 
 ## 环境准备
@@ -23,23 +24,55 @@ conda activate quillen
 
 ---
 
-## 模式一：本地转换
+## 整体流程
 
-适合开发调试、临时转换。
+```
+inbox/*.idea.md   →   handoff/*.qpad.md   →   outbox/*.docx
+   （创作简报）          （案笺草稿）            （交付文档）
+```
+
+- **`.idea.md`**：用自然语言描述文档意图，包含结构大纲、字数约束、素材与禁区（格式见 `inbox/IDEA.md`）
+- **`.qpad.md`**：带 YAML 前言区的 Markdown 正文，是排版程序的直接输入（格式见 `handoff/PAD.md`）
+- **`.docx`**：最终交付文件，输出至 `outbox/`
+
+---
+
+## 模式一：idea → docx（工作流模式）
+
+在 Claude Code 中准备好 `*.idea.md` 后，执行命令，由 Agent 自动完成从创作简报到交付文档的全流程，含草稿生成、字数质检与格式输出。
+
+**前置条件**：Claude Code 打开 `Quillen/` 目录。
+
+```
+/idea2doc inbox/你的简报.idea.md
+```
+
+示例简报见 `inbox/example/`。
+
+---
+
+## 模式二：qpad → docx（本地手动模式）
+
+直接编写或修改 `.qpad.md`，本地运行 `compose.py` 生成文档。
 
 ```bash
-conda activate quillen
-python desk/compose.py handoff/examples/handoff-sample.qpad.md
-# 输出到 outbox/handoff-sample.docx
+conda run -n quillen python desk/compose.py handoff/foo.qpad.md
+# 输出到 outbox/foo.docx
 ```
 
 指定输出目录：
 
 ```bash
-python desk/compose.py path/to/稿件.qpad.md -o /tmp/out
+conda run -n quillen python desk/compose.py handoff/foo.qpad.md -o /tmp/out
 ```
 
-### 前言区字段
+字数质检（可选）：
+
+```bash
+conda run -n quillen python desk/check.py handoff/foo.qpad.md --target 7500-8500
+```
+
+### .qpad.md 前言区字段
 
 ```yaml
 ---
@@ -59,8 +92,6 @@ layout:
 
 ### 添加模板
 
-将已有 `.docx` 复制到 `handoff/templates/<name>/reference.docx` 即可：
-
 ```bash
 cp 源文件.docx handoff/templates/mytemplate/reference.docx
 ```
@@ -69,26 +100,9 @@ cp 源文件.docx handoff/templates/mytemplate/reference.docx
 
 ---
 
-## 模式二：自动流水线（auto 分支）
+## 模式三：远端 CI（待开发）
 
-适合在 Windows 网页端用 Claude Code 写稿、自动生成 docx 到独立仓库。
-
-### 流程
-
-```
-编辑 handoff/*.auto.qpad.md
-  → push 到 auto 分支
-  → GitHub Actions 运行 compose.py
-  → docx 推送到 Quillen-out/wjb/
-```
-
-### 投稿槽
-
-`handoff/` 下以 `.auto.qpad.md` 结尾的文件为固定槽位，直接编辑内容即可触发。输出文件名取自文件名去掉 `.auto.qpad.md` 后缀。
-
-### 自动同步
-
-`sync-inbox` workflow 每周一 02:00 UTC 自动将 `main` 合并进 `auto` 分支，保持 desk 脚本最新。
+push 触发 GitHub Actions 自动生成，输出推送至独立仓库。
 
 ---
 

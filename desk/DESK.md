@@ -17,6 +17,24 @@ python desk/compose.py <file.qpad.md> [-o <outbox>]
 
 ---
 
+## check.py — 字数质检（CLI）
+
+```bash
+python desk/check.py <file.qpad.md> [--target MIN-MAX]
+```
+
+统计正文中文字符数（剥离代码块），与目标范围比对：
+
+| 结果 | 输出 | exit code |
+|------|------|-----------|
+| 在范围内 | `✓ 字数: N  目标: MIN–MAX` | 0 |
+| 低于下限 | `✗ 字数: N  目标: MIN–MAX（差 X 字）` | 1 |
+| 高于上限 | `⚠ 字数: N  目标: MIN–MAX（超出 X 字）` | 0 |
+
+省略 `--target` 时只打印字数，不做判断。
+
+---
+
 ## formula.py — 核心库（不直接运行）
 
 供 `compose.py` 导入，不暴露 CLI。
