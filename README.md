@@ -6,12 +6,12 @@
 
 | 路径 | 说明 |
 |------|------|
-| `environment.yml` | Conda 环境定义（环境名 `quillen`：Python、pandoc、pypandoc、pyyaml） |
-| `handoff/` | **交接层**（案头待办）：`PAD.md`（案笺格式说明）、`templates/`（命名模板目录）、`examples/`（示例稿） |
-| `desk/` | **办公桌**：工具脚本，真正动手转换的地方；`compose.py`（入口）、`formula.py`（库）、`utils.py`（路径与后处理），详见 `desk/DESK.md` |
-| `desk/tests/` | 与 desk 配套的单元测试 |
-| `inbox/` | **投稿槽**：`*.auto.qpad.md` 变动自动触发 CI 流水线 |
-| `outbox/` | **成品筐**：本地输出目录（`.gitignore` 已忽略） |
+| `environment.yml` | Conda 环境定义（`quillen`：Python、pandoc、pypandoc、pyyaml） |
+| `inbox/` | 创作简报槽：`*.idea.md` 文件（格式见 `inbox/IDEA.md`） |
+| `handoff/` | 交接层：`PAD.md`（案笺格式说明）、`*.auto.qpad.md`（CI 触发槽）、`templates/`、`examples/` |
+| `desk/` | 工具脚本：`compose.py`（入口）、`formula.py`（库）、`utils.py`（路径与后处理）；详见 `desk/DESK.md` |
+| `desk/tests/` | 单元测试 |
+| `outbox/` | 本地输出目录（`.gitignore` 已忽略） |
 | `.github/workflows/` | CI 工作流（`compose-auto`、`sync-inbox`） |
 
 ## 环境准备
@@ -76,7 +76,7 @@ cp 源文件.docx handoff/templates/mytemplate/reference.docx
 ### 流程
 
 ```
-编辑 inbox/*.auto.qpad.md
+编辑 handoff/*.auto.qpad.md
   → push 到 auto 分支
   → GitHub Actions 运行 compose.py
   → docx 推送到 Quillen-out/wjb/
@@ -84,7 +84,7 @@ cp 源文件.docx handoff/templates/mytemplate/reference.docx
 
 ### 投稿槽
 
-`inbox/` 下以 `.auto.qpad.md` 结尾的文件为固定槽位，直接编辑内容即可触发。输出文件名取自文件名去掉 `.auto.qpad.md` 后缀。
+`handoff/` 下以 `.auto.qpad.md` 结尾的文件为固定槽位，直接编辑内容即可触发。输出文件名取自文件名去掉 `.auto.qpad.md` 后缀。
 
 ### 自动同步
 
