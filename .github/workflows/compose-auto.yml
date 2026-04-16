@@ -3,7 +3,7 @@ name: compose-auto
 on:
   push:
     branches: ["auto"]
-    paths: ["inbox/*.auto.qpad.md"]
+    paths: ["handoff/*.auto.qpad.md"]
   workflow_dispatch:
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
       - name: Run compose on all auto files
         run: |
           mkdir -p outbox
-          for f in inbox/*.auto.qpad.md; do
+          for f in handoff/*.auto.qpad.md; do
             echo "Processing: $f"
             python desk/compose.py "$f" -o outbox/
           done
