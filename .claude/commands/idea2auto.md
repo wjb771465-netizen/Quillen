@@ -4,15 +4,19 @@
 
 **第一步：读取输入**
 
-读取简报文件：`$ARGUMENTS`
+判断 `$ARGUMENTS` 的形式：
+
+- 若 `$ARGUMENTS` 是以 `.idea.md` 结尾的路径，尝试读取该文件；若文件不存在，停止并报告
+- 若 `$ARGUMENTS` 是内联的简报正文（非文件路径），直接将其作为简报内容使用
 
 同时读取 `handoff/PAD.md` 了解 .qpad.md 的完整格式规范；若文件不存在，停止并报告。
 
 **第二步：确定输出路径**
 
-取 `$ARGUMENTS` 的文件名（忽略输入目录），去掉 `.idea.md` 后缀，加 `.auto.qpad.md`，写入 `handoff/` 目录。
-例：`inbox/quarterly.idea.md` → `handoff/quarterly.auto.qpad.md`
-例：`quarterly.idea.md` → `handoff/quarterly.auto.qpad.md`
+- 若输入是文件路径：取文件名，去掉 `.idea.md` 后缀，加 `.auto.qpad.md`，写入 `handoff/`
+  例：`inbox/quarterly.idea.md` → `handoff/quarterly.auto.qpad.md`
+- 若输入是内联内容：从简报「核心目的」或标题提炼一个简短英文 slug（小写、连字符），写入 `handoff/<slug>.auto.qpad.md`
+  例：简报标题「季度业务报告」→ `handoff/quarterly-report.auto.qpad.md`
 
 **第三步：生成 .auto.qpad.md**
 
