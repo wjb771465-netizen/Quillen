@@ -15,10 +15,10 @@ jobs:
           ref: auto
           fetch-depth: 0
 
-      - name: Merge from main
+      - name: Reset auto from main
         run: |
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git fetch origin main
-          git merge origin/main --no-edit
-          git push origin auto
+          git reset --hard origin/main
+          git push origin auto --force
