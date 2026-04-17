@@ -85,15 +85,19 @@ python desk/check.py <输出路径> --target <总字数范围>
 
 **第五步：推送到 auto 分支触发 CI**
 
-质检通过后，执行：
+质检通过后，用 orphan 分支推送，避免文件污染当前分支：
 
 ```bash
+git checkout --orphan auto-tmp
+git reset HEAD .                        # 清空 index，只留工作区文件
 git add handoff/<输出文件名>
 git commit -m "auto: <title>"
-git push origin HEAD:auto
+git push origin auto-tmp:auto --force
+git checkout -                          # 回到原分支
+git branch -D auto-tmp
 ```
 
-CI（`compose-auto.yml`）将自动运行 `compose.py` 并把 `.docx` 推送到 Quillen-out 仓库。
+auto 分支始终只有一个 commit，不会积累历史；当前分支不留任何痕迹。CI（`compose-auto.yml`）将自动运行 `compose.py` 并把 `.docx` 推送到 Quillen-out 仓库。
 
 **第六步：完工报告**
 
