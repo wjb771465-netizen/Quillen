@@ -1,4 +1,7 @@
+outbox/*.doc
 outbox/*.docx
+outbox/*.DOC
+outbox/*.DOCX
 
 inbox/*.idea.md
 handoff/*.qpad.md

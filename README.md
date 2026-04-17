@@ -8,11 +8,10 @@
 |------|------|
 | `environment.yml` | Conda 环境定义（`quillen`：Python、pandoc、pypandoc、pyyaml） |
 | `inbox/` | 创作简报槽：`*.idea.md` 文件（格式见 `inbox/IDEA.md`）；`example/` 存放示例简报 |
-| `handoff/` | 交接层：`PAD.md`（案笺格式说明）、`*.auto.qpad.md`（CI 触发槽）、`templates/`、`examples/` |
-| `desk/` | 办公桌，存放工具脚本:详见 `desk/DESK.md` |
-| `desk/tests/` | 单元测试 |
+| `handoff/` | 交接层：`PAD.md`（案笺格式说明）、`templates/`、`examples/` |
+| `agent/` | 工作流定义：`new-idea.md`、`idea2doc.md`、`idea2auto.md` |
+| `desk/` | 办公桌，存放工具脚本，详见 `desk/DESK.md` |
 | `outbox/` | 本地输出目录（`.gitignore` 已忽略） |
-| `.claude/commands/` | Claude Code 自定义命令；`idea2doc.md` 为完整 idea→docx 工作流 |
 | `.github/workflows/` | CI 工作流（`compose-auto`、`sync-inbox`） |
 
 ## 环境准备
@@ -27,91 +26,79 @@ conda activate quillen
 ## 整体流程
 
 ```
-inbox/*.idea.md   →   handoff/*.qpad.md   →   outbox/*.docx
-   （创作简报）          （案笺草稿）            （交付文档）
+用户 idea
+    │
+    ▼  agent/new-idea.md（对话引导 → 确认结构）
+    │
+    ▼
+inbox/*.idea.md          ← 创作简报（结构、字数、素材、禁区）
+    │
+    ▼  agent/idea2doc.md 或 agent/idea2auto.md
+    │
+    ▼
+handoff/*.qpad.md        ← 案笺草稿（带 YAML 前言的 Markdown 正文）
+    │
+    ├── 本地 ──▶ outbox/*.docx
+    │
+    └── 远端 ──▶ push 至远端 GitHub 仓库，由 CI 触发排版并推送产物
 ```
 
 - **`.idea.md`**：用自然语言描述文档意图，包含结构大纲、字数约束、素材与禁区（格式见 `inbox/IDEA.md`）
 - **`.qpad.md`**：带 YAML 前言区的 Markdown 正文，是排版程序的直接输入（格式见 `handoff/PAD.md`）
-- **`.docx`**：最终交付文件，输出至 `outbox/`
 
 ---
 
-## 模式一：idea → docx（工作流模式）
+## 使用方式
 
-在 Claude Code 中准备好 `*.idea.md` 后，执行命令，由 Agent 自动完成从创作简报到交付文档的全流程，含草稿生成、字数质检与格式输出。
+核心入口是 `agent/new-idea.md`，它负责在对话中引导用户从一句话想法走到确认好的创作简报，再自动落稿。任何能执行 Markdown 工作流的 AI 工具都可以触发它；下面以 **Claude Code** 为例。
 
-**前置条件**：Claude Code 打开 `Quillen/` 目录。
+### 以 Claude Code 为例
+
+**第一步：配置 Skill**
+
+在用户配置目录下创建 Skill 文件：
 
 ```
-/idea2doc inbox/你的简报.idea.md
+~/.claude/skills/quillen/SKILL.md
 ```
 
-示例简报见 `inbox/example/`。
+写入以下内容（将 `/path/to/Quillen` 替换为本仓库实际绝对路径）：
+
+```markdown
+---
+name: quillen
+description: 奎琳文书工作流：自然语言描述触发创作引导，.idea.md 路径直接落稿
+argument-hint: [主题描述 | path/to/file.idea.md]
+version: 1.0.0
+---
+
+根据 `$ARGUMENTS` 的形式，路由到对应的奎琳工作流：
+
+- 若 `$ARGUMENTS` 是以 `.idea.md` 结尾的文件路径：读取并执行 `/path/to/Quillen/agent/idea2doc.md`，以 `$ARGUMENTS` 作为输入
+- 否则（自然语言描述或空）：读取并执行 `/path/to/Quillen/agent/new-idea.md`，以 `$ARGUMENTS` 作为输入
+```
+
+**第二步：触发工作流**
+
+在 Claude Code 中输入主题描述，奎琳会先对话引导确认结构，再自动落稿：
+
+```
+/quillen 论述詹姆斯的历史地位已经超过了乔丹
+```
+
+已有 `.idea.md` 时可跳过引导直接落稿：
+
+```
+/quillen inbox/your-doc.idea.md
+```
 
 ---
 
-## 模式二：qpad → docx（本地手动模式）
+## TODO
 
-直接编写或修改 `.qpad.md`，本地运行 `compose.py` 生成文档。
-
-```bash
-conda run -n quillen python desk/compose.py handoff/foo.qpad.md
-# 输出到 outbox/foo.docx
-```
-
-指定输出目录：
-
-```bash
-conda run -n quillen python desk/compose.py handoff/foo.qpad.md -o /tmp/out
-```
-
-字数质检（可选）：
-
-```bash
-conda run -n quillen python desk/check.py handoff/foo.qpad.md --target 7500-8500
-```
-
-### .qpad.md 前言区字段
-
-```yaml
----
-quillen_pad:
-  version: 1
-  kind: report        # memo | report
-  title: "标题"
-  lang: zh-CN
-template: report      # 逻辑名 → handoff/templates/report/reference.docx
-layout:
-  list_left: 0        # 列表左缩进（twips，567≈1cm）
-  list_hanging: 0     # 符号悬挂量
----
-```
-
-`template` 省略时走无样式的默认 pandoc 输出；`layout` 省略时不做后处理。
-
-### 添加模板
-
-```bash
-cp 源文件.docx handoff/templates/mytemplate/reference.docx
-```
-
-前言区写 `template: mytemplate`。
-
----
-
-## 模式三：远端 CI（待开发）
-
-push 触发 GitHub Actions 自动生成，输出推送至独立仓库。
-
----
-
-## 测试
-
-```bash
-conda activate quillen
-python -m unittest discover -s desk/tests -v
-```
+- [ ] **目录处理**：自动生成带超链接的文档目录，支持插入位置配置
+- [ ] **图片及说明**：图片嵌入、自动编号（图 1、图 2…）、题注样式
+- [ ] **PPT 支持**：`.idea.md` → 演示文稿大纲，输出 PPTX
 
 ---
 
