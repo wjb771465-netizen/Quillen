@@ -2,6 +2,7 @@ outbox/*.docx
 
 inbox/*.idea.md
 handoff/*.qpad.md
+!handoff/*.auto.qpad.md
 
 __pycache__/
 *.py[cod]
